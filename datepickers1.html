@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>7 DatePicker Types — Selenium Practice</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d0f14; --card: #13161e; --border: #1f2433;
+  --accent: #4fffb0; --text: #e8eaf0; --muted: #5a6075;
+}
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; padding:30px 20px; }
+.page-header { text-align:center; margin-bottom:40px; }
+.page-header h1 { font-size:36px; font-weight:800; color:#fff; }
+.page-header p  { color:var(--muted); font-size:13px; margin-top:8px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:20px; max-width:1200px; margin:0 auto; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; }
+.card-num   { font-size:11px; color:var(--muted); letter-spacing:2px; margin-bottom:4px; }
+.card-title { font-size:17px; font-weight:700; color:#fff; margin-bottom:3px; }
+.card-sub   { font-size:11px; color:var(--accent); margin-bottom:14px; font-family:monospace; }
+.id-badge   { display:inline-block; font-size:11px; background:rgba(79,255,176,0.08); border:1px solid rgba(79,255,176,0.2); color:var(--accent); padding:3px 10px; border-radius:4px; margin-bottom:14px; font-family:monospace; }
+label { display:block; font-size:11px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:1px; font-family:monospace; }
+.picker-wrap { margin-bottom:10px; }
+input[type=text], input[type=date], input[type=datetime-local],
+input[type=month], input[type=week], select {
+  width:100%; background:#0a0c10; border:1px solid var(--border);
+  border-radius:7px; color:var(--text); font-family:monospace;
+  font-size:13px; padding:9px 13px; outline:none;
+}
+input:focus, select:focus { border-color:var(--accent); }
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=datetime-local]::-webkit-calendar-picker-indicator,
+input[type=month]::-webkit-calendar-picker-indicator,
+input[type=week]::-webkit-calendar-picker-indicator { filter:invert(1); cursor:pointer; }
+.selects-row { display:flex; gap:8px; }
+.selects-row select { flex:1; }
+.result-box { margin-top:10px; background:rgba(79,255,176,0.05); border:1px solid rgba(79,255,176,0.15); border-radius:6px; padding:8px 12px; font-family:monospace; font-size:12px; color:var(--accent); min-height:32px; }
+.result-box span { color:var(--muted); }
+
+/* ── TYPE 2 & 3: Custom inline calendar ── */
+.cal-wrap { position:relative; }
+.cal-icon { position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:16px; color:var(--accent); }
+.cal-popup {
+  display:none; position:absolute; z-index:9999; top:calc(100% + 4px); left:0;
+  background:#1a1d26; border:1px solid var(--border); border-radius:10px;
+  padding:14px; min-width:260px; box-shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+.cal-popup.open { display:block; }
+.cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.cal-header button { background:none; border:none; color:var(--accent); font-size:18px; cursor:pointer; padding:0 6px; }
+.cal-header .cal-title { font-size:14px; font-weight:700; color:#fff; cursor:pointer; }
+.cal-header .cal-title:hover { color:var(--accent); }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.cal-grid .day-name { text-align:center; font-size:10px; color:var(--muted); padding:3px 0; }
+.cal-grid .day-cell {
+  text-align:center; padding:5px 2px; font-size:12px; cursor:pointer;
+  border-radius:4px; color:var(--text);
+}
+.cal-grid .day-cell:hover { background:rgba(79,255,176,0.15); color:var(--accent); }
+.cal-grid .day-cell.other-month { color:#333; cursor:default; }
+.cal-grid .day-cell.other-month:hover { background:none; color:#333; }
+.cal-grid .day-cell.selected { background:var(--accent); color:#000; font-weight:700; }
+.cal-grid .day-cell.today { border:1px solid var(--accent); }
+/* Month/Year select grids */
+.month-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.month-grid .m-cell, .year-grid .y-cell {
+  text-align:center; padding:7px 4px; font-size:12px; cursor:pointer;
+  border-radius:5px; color:var(--text); border:1px solid transparent;
+}
+.month-grid .m-cell:hover, .year-grid .y-cell:hover { background:rgba(79,255,176,0.15); color:var(--accent); }
+.year-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+/* Time section */
+.time-section { margin-top:12px; border-top:1px solid var(--border); padding-top:10px; display:flex; gap:8px; align-items:center; justify-content:center; }
+.time-field { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.time-field button { background:none; border:1px solid var(--border); color:var(--accent); cursor:pointer; border-radius:4px; width:32px; font-size:14px; }
+.time-field button:hover { background:rgba(79,255,176,0.1); }
+.time-display { font-size:18px; font-weight:700; color:#fff; width:36px; text-align:center; font-family:monospace; }
+.time-sep { font-size:20px; color:var(--muted); margin-top:8px; }
+.time-label { font-size:10px; color:var(--muted); }
+/* Type 5 flatpickr-style */
+.fp-cal { display:none; position:absolute; z-index:9999; top:calc(100%+4px); left:0; background:#1a1d26; border:1px solid var(--border); border-radius:10px; padding:14px; min-width:260px; box-shadow:0 8px 32px rgba(0,0,0,.5); }
+.fp-cal.open { display:block; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>7 DatePicker Types</h1>
+  <p>// All types in one file · Selenium Practice · Works on file:///</p>
+</div>
+
+<div class="grid">
+
+  <!-- TYPE 1 — Native input[type=date] -->
+  <div class="card">
+    <div class="card-num">TYPE 01</div>
+    <div class="card-title">Native HTML5</div>
+    <div class="card-sub">input[type="date"] — sendKeys / JS</div>
+    <div class="id-badge">id="type1-date"</div>
+    <div class="picker-wrap">
+      <label>Select Date</label>
+      <input type="date" id="type1-date"/>
+    </div>
+    <div class="result-box" id="type1-result"><span>// value appears here</span></div>
+  </div>
+
+  <!-- TYPE 2 — Custom Bootstrap-style calendar (date only) -->
+  <div class="card">
+    <div class="card-num">TYPE 02</div>
+    <div class="card-title">Custom Calendar (Date Only)</div>
+    <div class="card-sub">Click icon → Month/Year header nav</div>
+    <div class="id-badge">id="type2-input"</div>
+    <div class="picker-wrap">
+      <label>Select Date</label>
+      <div class="cal-wrap" id="type2-wrap">
+        <input type="text" id="type2-input" placeholder="DD/MM/YYYY" readonly/>
+        <span class="cal-icon" id="type2-icon">&#128197;</span>
+        <div class="cal-popup" id="type2-popup">
+          <div class="cal-header">
+            <button id="type2-prev">&#8249;</button>
+            <span class="cal-title" id="type2-title">April 2025</span>
+            <button id="type2-next">&#8250;</button>
+          </div>
+          <div class="cal-grid" id="type2-grid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="result-box" id="type2-result"><span>// value appears here</span></div>
+  </div>
+
+  <!-- TYPE 3 — Custom calendar with Time -->
+  <div class="card">
+    <div class="card-num">TYPE 03</div>
+    <div class="card-title">Custom Calendar + Time</div>
+    <div class="card-sub">Date picker + Hour / Minute arrows</div>
+    <div class="id-badge">id="type3-input"</div>
+    <div class="picker-wrap">
+      <label>Select Date and Time</label>
+      <div class="cal-wrap" id="type3-wrap">
+        <input type="text" id="type3-input" placeholder="DD/MM/YYYY HH:mm" readonly/>
+        <span class="cal-icon" id="type3-icon">&#128336;</span>
+        <div class="cal-popup" id="type3-popup">
+          <div class="cal-header">
+            <button id="type3-prev">&#8249;</button>
+            <span class="cal-title" id="type3-title">April 2025</span>
+            <button id="type3-next">&#8250;</button>
+          </div>
+          <div class="cal-grid" id="type3-grid"></div>
+          <div class="time-section" id="type3-time">
+            <div class="time-field">
+              <button id="type3-hour-up">▲</button>
+              <div class="time-display" id="type3-hour-display">00</div>
+              <button id="type3-hour-down">▼</button>
+              <div class="time-label">HH</div>
+            </div>
+            <div class="time-sep">:</div>
+            <div class="time-field">
+              <button id="type3-min-up">▲</button>
+              <div class="time-display" id="type3-min-display">00</div>
+              <button id="type3-min-down">▼</button>
+              <div class="time-label">MM</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="result-box" id="type3-result"><span>// value appears here</span></div>
+  </div>
+
+  <!-- TYPE 4 — Dropdown selects -->
+  <div class="card">
+    <div class="card-num">TYPE 04</div>
+    <div class="card-title">Dropdown Select</div>
+    <div class="card-sub">Separate Day / Month / Year dropdowns</div>
+    <div class="id-badge">id="type4-day" / type4-month / type4-year</div>
+    <div class="picker-wrap">
+      <label>Select Date</label>
+      <div class="selects-row">
+        <select id="type4-day">
+          <option value="">Day</option>
+          <script>for(let i=1;i<=31;i++) document.write(`<option value="${i}">${i}</option>`);</script>
+        </select>
+        <select id="type4-month">
+          <option value="">Month</option>
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <select id="type4-year">
+          <option value="">Year</option>
+          <script>for(let i=2020;i<=2030;i++) document.write(`<option value="${i}">${i}</option>`);</script>
+        </select>
+      </div>
+    </div>
+    <div class="result-box" id="type4-result"><span>// value appears here</span></div>
+  </div>
+
+  <!-- TYPE 5 — Inline Date Range -->
+  <div class="card">
+    <div class="card-num">TYPE 05</div>
+    <div class="card-title">Date Range Picker</div>
+    <div class="card-sub">From and To — two inline calendars</div>
+    <div class="id-badge">id="type5-from" / id="type5-to"</div>
+    <div class="picker-wrap">
+      <label>From Date</label>
+      <div class="cal-wrap" id="type5-from-wrap">
+        <input type="text" id="type5-from" placeholder="Select start date" readonly/>
+        <span class="cal-icon" id="type5-from-icon">&#128197;</span>
+        <div class="cal-popup" id="type5-from-popup">
+          <div class="cal-header">
+            <button id="type5-from-prev">&#8249;</button>
+            <span class="cal-title" id="type5-from-title">April 2025</span>
+            <button id="type5-from-next">&#8250;</button>
+          </div>
+          <div class="cal-grid" id="type5-from-grid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="picker-wrap">
+      <label>To Date</label>
+      <div class="cal-wrap" id="type5-to-wrap">
+        <input type="text" id="type5-to" placeholder="Select end date" readonly/>
+        <span class="cal-icon" id="type5-to-icon">&#128197;</span>
+        <div class="cal-popup" id="type5-to-popup">
+          <div class="cal-header">
+            <button id="type5-to-prev">&#8249;</button>
+            <span class="cal-title" id="type5-to-title">April 2025</span>
+            <button id="type5-to-next">&#8250;</button>
+          </div>
+          <div class="cal-grid" id="type5-to-grid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="result-box" id="type5-result"><span>// range appears here</span></div>
+  </div>
+
+  <!-- TYPE 6 — jQuery-style arrow navigation (pure JS) -->
+  <div class="card">
+    <div class="card-num">TYPE 06</div>
+    <div class="card-title">Arrow Navigation Calendar</div>
+    <div class="card-sub">Prev/Next arrows · click day link</div>
+    <div class="id-badge">id="type6-input"</div>
+    <div class="picker-wrap">
+      <label>Select Date</label>
+      <div class="cal-wrap" id="type6-wrap">
+        <input type="text" id="type6-input" placeholder="Click to open" readonly/>
+        <span class="cal-icon" id="type6-icon">&#128197;</span>
+        <div class="cal-popup" id="type6-popup">
+          <div class="cal-header">
+            <button id="type6-prev" class="ui-datepicker-prev">&#8249;</button>
+            <span class="cal-title" id="type6-title">April 2025</span>
+            <button id="type6-next" class="ui-datepicker-next">&#8250;</button>
+          </div>
+          <div id="type6-calendar-body"></div>
+        </div>
+      </div>
+    </div>
+    <div class="result-box" id="type6-result"><span>// value appears here</span></div>
+  </div>
+
+  <!-- TYPE 7 — Native variants -->
+  <div class="card">
+    <div class="card-num">TYPE 07</div>
+    <div class="card-title">Native Variants</div>
+    <div class="card-sub">datetime-local · month · week</div>
+    <div class="id-badge">id="type7-datetime" / type7-month / type7-week</div>
+    <div class="picker-wrap">
+      <label>Date + Time</label>
+      <input type="datetime-local" id="type7-datetime"/>
+    </div>
+    <div class="picker-wrap">
+      <label>Month Picker</label>
+      <input type="month" id="type7-month"/>
+    </div>
+    <div class="picker-wrap">
+      <label>Week Picker</label>
+      <input type="week" id="type7-week"/>
+    </div>
+    <div class="result-box" id="type7-result"><span>// values appear here</span></div>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// CALENDAR ENGINE — pure vanilla JS, no CDN needed
+// ════════════════════════════════════════════════════════════════
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS         = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function buildCalendar(cfg) {
+  // cfg: { gridId, titleId, prevId, nextId, inputId, resultId, withTime, timeIds }
+  let year = cfg.year || new Date().getFullYear();
+  let month = cfg.month !== undefined ? cfg.month : new Date().getMonth();
+  let view = 'days'; // days | months | years
+
+  function render() {
+    const titleEl = document.getElementById(cfg.titleId);
+    const gridEl  = document.getElementById(cfg.gridId);
+
+    if (view === 'days') {
+      titleEl.textContent = MONTHS_FULL[month] + ' ' + year;
+      let html = DAYS.map(d => `<div class="day-name">${d}</div>`).join('');
+      const first = new Date(year, month, 1).getDay();
+      const days  = new Date(year, month+1, 0).getDate();
+      const prevDays = new Date(year, month, 0).getDate();
+      for (let i = 0; i < first; i++) {
+        html += `<div class="day-cell other-month">${prevDays - first + i + 1}</div>`;
+      }
+      for (let d = 1; d <= days; d++) {
+        html += `<div class="day-cell" data-day="${d}" data-month="${month}" data-year="${year}">${d}</div>`;
+      }
+      const remaining = 42 - first - days;
+      for (let d = 1; d <= remaining; d++) {
+        html += `<div class="day-cell other-month">${d}</div>`;
+      }
+      gridEl.innerHTML = html;
+      gridEl.querySelectorAll('.day-cell:not(.other-month)').forEach(cell => {
+        cell.addEventListener('click', function() {
+          const d = this.dataset.day, m = this.dataset.month, y = this.dataset.year;
+          const val = pad(d) + '/' + pad(parseInt(m)+1) + '/' + y;
+          document.getElementById(cfg.inputId).value = val;
+          if (cfg.resultId) document.getElementById(cfg.resultId).textContent = 'Value: ' + val;
+          // update datetime if time picker
+          if (cfg.withTime) updateDateTime(cfg);
+          closePopup(cfg);
+        });
+      });
+    } else if (view === 'months') {
+      titleEl.textContent = year;
+      let html = '';
+      MONTHS_SHORT.forEach((m, i) => {
+        html += `<div class="m-cell" data-mi="${i}">${m}</div>`;
+      });
+      gridEl.className = 'month-grid';
+      gridEl.innerHTML = html;
+      gridEl.querySelectorAll('.m-cell').forEach(cell => {
+        cell.addEventListener('click', function() {
+          month = parseInt(this.dataset.mi);
+          view = 'days';
+          gridEl.className = 'cal-grid';
+          render();
+        });
+      });
+    } else if (view === 'years') {
+      const base = Math.floor(year / 10) * 10;
+      titleEl.textContent = base + ' – ' + (base+9);
+      let html = '';
+      for (let y = base; y < base+10; y++) {
+        html += `<div class="y-cell" data-y="${y}">${y}</div>`;
+      }
+      gridEl.className = 'year-grid';
+      gridEl.innerHTML = html;
+      gridEl.querySelectorAll('.y-cell').forEach(cell => {
+        cell.addEventListener('click', function() {
+          year = parseInt(this.dataset.y);
+          view = 'months';
+          gridEl.className = 'cal-grid';
+          render();
+        });
+      });
+    }
+  }
+
+  function closePopup(cfg) {
+    // find popup by replacing -grid with -popup
+    const popupId = cfg.gridId.replace('-grid', '-popup');
+    const popup = document.getElementById(popupId);
+    if (popup) popup.classList.remove('open');
+  }
+
+  // Nav buttons
+  document.getElementById(cfg.prevId).addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (view === 'days') {
+      month--; if (month < 0) { month = 11; year--; }
+    } else if (view === 'months') {
+      year--;
+    } else if (view === 'years') {
+      year -= 10;
+    }
+    render();
+  });
+  document.getElementById(cfg.nextId).addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (view === 'days') {
+      month++; if (month > 11) { month = 0; year++; }
+    } else if (view === 'months') {
+      year++;
+    } else if (view === 'years') {
+      year += 10;
+    }
+    render();
+  });
+
+  // Title click cycles: days → months → years → days
+  document.getElementById(cfg.titleId).addEventListener('click', function(e) {
+    e.stopPropagation();
+    const gridEl = document.getElementById(cfg.gridId);
+    if (view === 'days') { view = 'months'; gridEl.className = 'month-grid'; }
+    else if (view === 'months') { view = 'years'; gridEl.className = 'year-grid'; }
+    else { view = 'days'; gridEl.className = 'cal-grid'; }
+    render();
+  });
+
+  // Time controls
+  if (cfg.withTime && cfg.timeIds) {
+    let hh = 0, mm = 0;
+    function updateHourDisplay() {
+      document.getElementById(cfg.timeIds.hourDisplay).textContent = pad(hh);
+    }
+    function updateMinDisplay() {
+      document.getElementById(cfg.timeIds.minDisplay).textContent = pad(mm);
+    }
+    document.getElementById(cfg.timeIds.hourUp).addEventListener('click', function() {
+      hh = (hh + 1) % 24; updateHourDisplay();
+      if (cfg.inputId && document.getElementById(cfg.inputId).value)
+        updateDateTime(cfg, hh, mm);
+    });
+    document.getElementById(cfg.timeIds.hourDown).addEventListener('click', function() {
+      hh = (hh - 1 + 24) % 24; updateHourDisplay();
+      if (cfg.inputId && document.getElementById(cfg.inputId).value)
+        updateDateTime(cfg, hh, mm);
+    });
+    document.getElementById(cfg.timeIds.minUp).addEventListener('click', function() {
+      mm = (mm + 1) % 60; updateMinDisplay();
+      if (cfg.inputId && document.getElementById(cfg.inputId).value)
+        updateDateTime(cfg, hh, mm);
+    });
+    document.getElementById(cfg.timeIds.minDown).addEventListener('click', function() {
+      mm = (mm - 1 + 60) % 60; updateMinDisplay();
+      if (cfg.inputId && document.getElementById(cfg.inputId).value)
+        updateDateTime(cfg, hh, mm);
+    });
+  }
+
+  function updateDateTime(cfg, hh, mm) {
+    const dateVal = document.getElementById(cfg.inputId).value.split(' ')[0];
+    if (!dateVal) return;
+    const h = document.getElementById(cfg.timeIds.hourDisplay).textContent;
+    const m = document.getElementById(cfg.timeIds.minDisplay).textContent;
+    const full = dateVal + ' ' + h + ':' + m;
+    document.getElementById(cfg.inputId).value = full;
+    if (cfg.resultId) document.getElementById(cfg.resultId).textContent = 'Value: ' + full;
+  }
+
+  render();
+  return { setMonth: function(m){ month = m; }, setYear: function(y){ year = y; } };
+}
+
+// Open/close popups
+function initToggle(iconId, popupId) {
+  document.getElementById(iconId).addEventListener('click', function(e) {
+    e.stopPropagation();
+    // close all others first
+    document.querySelectorAll('.cal-popup').forEach(p => {
+      if (p.id !== popupId) p.classList.remove('open');
+    });
+    document.getElementById(popupId).classList.toggle('open');
+  });
+  document.getElementById(popupId).addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+}
+
+// Close popups on outside click
+document.addEventListener('click', function() {
+  document.querySelectorAll('.cal-popup').forEach(p => p.classList.remove('open'));
+});
+
+// ── Init all calendars ────────────────────────────────────────
+// TYPE 2
+initToggle('type2-icon', 'type2-popup');
+buildCalendar({ gridId:'type2-grid', titleId:'type2-title', prevId:'type2-prev', nextId:'type2-next', inputId:'type2-input', resultId:'type2-result' });
+
+// TYPE 3
+initToggle('type3-icon', 'type3-popup');
+buildCalendar({ gridId:'type3-grid', titleId:'type3-title', prevId:'type3-prev', nextId:'type3-next', inputId:'type3-input', resultId:'type3-result', withTime:true,
+  timeIds:{ hourUp:'type3-hour-up', hourDown:'type3-hour-down', hourDisplay:'type3-hour-display', minUp:'type3-min-up', minDown:'type3-min-down', minDisplay:'type3-min-display' }
+});
+
+// TYPE 5 FROM
+initToggle('type5-from-icon', 'type5-from-popup');
+buildCalendar({ gridId:'type5-from-grid', titleId:'type5-from-title', prevId:'type5-from-prev', nextId:'type5-from-next', inputId:'type5-from',
+  resultId: null,
+  onSelect: function(val) {
+    updateType5Result();
+  }
+});
+document.getElementById('type5-from').addEventListener('change', updateType5Result);
+
+// TYPE 5 TO
+initToggle('type5-to-icon', 'type5-to-popup');
+buildCalendar({ gridId:'type5-to-grid', titleId:'type5-to-title', prevId:'type5-to-prev', nextId:'type5-to-next', inputId:'type5-to',
+  resultId: null
+});
+document.getElementById('type5-to').addEventListener('change', updateType5Result);
+
+function updateType5Result() {
+  const f = document.getElementById('type5-from').value;
+  const t = document.getElementById('type5-to').value;
+  if (f && t) document.getElementById('type5-result').textContent = 'Range: ' + f + ' → ' + t;
+  else if (f) document.getElementById('type5-result').textContent = 'From: ' + f;
+}
+
+// TYPE 6 — same engine, different grid container id
+initToggle('type6-icon', 'type6-popup');
+buildCalendar({ gridId:'type6-calendar-body', titleId:'type6-title', prevId:'type6-prev', nextId:'type6-next', inputId:'type6-input', resultId:'type6-result' });
+
+// TYPE 4 dropdowns
+['type4-day','type4-month','type4-year'].forEach(id => {
+  document.getElementById(id).addEventListener('change', function() {
+    const d = document.getElementById('type4-day').value;
+    const m = document.getElementById('type4-month').value;
+    const y = document.getElementById('type4-year').value;
+    if (d && m && y) document.getElementById('type4-result').textContent = 'Value: '+d+'/'+m+'/'+y;
+  });
+});
+
+// TYPE 1 & 7
+['type1-date'].forEach(id => {
+  document.getElementById(id).addEventListener('change', function() {
+    document.getElementById('type1-result').textContent = 'Value: ' + this.value;
+  });
+});
+['type7-datetime','type7-month','type7-week'].forEach(id => {
+  document.getElementById(id).addEventListener('change', function() {
+    const dt = document.getElementById('type7-datetime').value;
+    const mo = document.getElementById('type7-month').value;
+    const wk = document.getElementById('type7-week').value;
+    document.getElementById('type7-result').textContent =
+      'datetime:' + (dt||'-') + ' | month:' + (mo||'-') + ' | week:' + (wk||'-');
+  });
+});
+</script>
+</body>
+</html>
